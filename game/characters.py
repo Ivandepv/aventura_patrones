@@ -16,8 +16,12 @@ class Character(ABC):
     def describe(self):
         print(f"--- {self.name} ---")
         print(f"Salud: {self.health}")
-        print(f"Arma: {self.weapon.description()} (Bono Ataque: {self.weapon.attack_bonus()})")
-        print(f"Armadura: {self.armor.description()} (Bono Defensa: {self.armor.defense_bonus()})")
+        # Línea CORREGIDA para el arma:
+        print(f"Arma: {self.weapon.get_description()} (Bono Ataque: {self.weapon.attack_bonus()})")
+
+        # Línea CORREGIDA para la armadura:
+        print(f"Armadura: {self.armor.get_description()} (Bono Defensa: {self.armor.defense_bonus()})")
+
         print(f"Habilidad Especial: {self.special_ability()}")
         print("--------------------")
 
