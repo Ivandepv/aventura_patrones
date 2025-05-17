@@ -3,6 +3,7 @@
 ![Expedition 33 alike](https://image.api.playstation.com/vulcan/ap/rnd/202501/2217/e5833a53529ff9879e87689f1e8b04d45ba7e6c97fa791e2.png)
 
 # Proyecto Integrador 3.8: Juego de Aventura con Patrones de Diseño
+# Demo 1.0 Funcional (!!!!!!utilizar clase Mage)
 
 ## Propósito del Proyecto
 
