@@ -1,7 +1,9 @@
 # main.py
 from game.factories import WarriorFactory, MageFactory, RogueFactory, CharacterEquipmentFactory
 from game.characters import Character
+from game.characters import Character, Warrior, Mage, Rogue # Importamos las clases concretas
 from game.items import Sword, FireEnchantment, PoisonEnchantment, VorpalEnchantment # Nuevas importaciones
+from game.strategies import AggressiveStrategy, DefensiveStrategy, SpellCastingStrategy
 
 def create_player(factory: CharacterEquipmentFactory, player_name: str) -> Character:
     """Crea un personaje usando la fábrica proporcionada."""
@@ -68,6 +70,37 @@ def main():
     # Actualizamos la descripción del jugador para ver el arma nueva
     print("\n--- Estado del Jugador Actualizado ---")
     player.describe()
+
+
+    print("\n--- Probando Estrategias de Combate ---")
+    # Para simular un combate, necesitamos un "enemigo".
+    # Por ahora, crearemos otro personaje como enemigo usando una fábrica.
+    print("Un enemigo aparece...")
+    enemy_factory = RogueFactory() # Un pícaro enemigo
+    enemy = enemy_factory.create_character("Bandido Furtivo")
+    # Podríamos darle una estrategia específica al enemigo
+    enemy.set_combat_strategy(AggressiveStrategy())
+    enemy.describe()
+
+    print(f"\n¡{player.name} se enfrenta a {enemy.name}!")
+
+    # Simulación de un turno de combate
+    action_description_player = player.perform_combat_action(enemy)
+    print(f"[Turno del Jugador] {action_description_player}")
+
+    action_description_enemy = enemy.perform_combat_action(player)
+    print(f"[Turno del Enemigo] {action_description_enemy}")
+
+    # El jugador decide cambiar de estrategia
+    if isinstance(player, Mage): # Si el jugador es Mago, puede tener más sentido cambiar a defensiva
+        print(f"\n{player.name} reconsidera su estrategia...")
+        player.set_combat_strategy(DefensiveStrategy())
+    else: # Si no, quizás una estrategia agresiva
+        player.set_combat_strategy(AggressiveStrategy()) # O cualquier otra disponible
+
+    # Otro turno
+    action_description_player = player.perform_combat_action(enemy)
+    print(f"[Turno del Jugador] {action_description_player}")
 
 
     # Aquí iría el bucle principal del juego
