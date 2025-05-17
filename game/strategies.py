@@ -1,9 +1,10 @@
 # game/strategies.py
+"""
+Define las estrategias de combate que los personajes pueden utilizar.
+"""
 from abc import ABC, abstractmethod
-
-# Para evitar la dependencia circular si Character necesita importar Strategy
-# y Strategy necesita type hints de Character, usamos una forward declaration.
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from game.characters import Character # Importación para type hinting
 
@@ -12,37 +13,48 @@ class CombatStrategy(ABC):
     def execute_action(self, actor: 'Character', target: 'Character') -> str:
         """
         Ejecuta una acción de combate.
-        Retorna una cadena describiendo la acción realizada.
+        Retorna una cadena describiendo la acción realizada y su resultado.
         """
         pass
 
-
 class AggressiveStrategy(CombatStrategy):
     def execute_action(self, actor: 'Character', target: 'Character') -> str:
-        # Lógica para un ataque agresivo.
-        # Por ahora, simulemos un ataque básico usando el arma del actor.
-        # En un juego más complejo, aquí podrías calcular daño, verificar si el golpe acierta, etc.
-        damage = actor.weapon.attack_bonus() # Simplificado
-        # target.health -= damage # (Descomentar cuando tengamos manejo de vida en combate)
-        return f"{actor.name} ataca agresivamente a {target.name} con {actor.weapon.get_name()} causando {damage} de daño (simulado)."
+        base_damage = actor.weapon.attack_bonus()
+        # Podrías añadir una pequeña varianza o bonus de fuerza del actor
+        actual_damage = base_damage 
+        
+        if target.health > 0: # Solo atacar si el objetivo está vivo
+            target.take_damage(actual_damage)
+            return (f"{actor.name} ataca agresivamente a {target.name} con {actor.weapon.get_name()} "
+                    f"causando {actual_damage} de daño. ¡{target.name} tiene {target.health} de salud restante!")
+        else:
+            return f"{actor.name} intenta atacar a {target.name}, pero ya está derrotado."
+
 
 class DefensiveStrategy(CombatStrategy):
     def execute_action(self, actor: 'Character', target: 'Character') -> str:
-        # Lógica para una acción defensiva.
-        # Podría ser aumentar la defensa temporalmente, curarse una pequeña cantidad, etc.
-        # actor.defense_points += 5 # Ejemplo
+        # En lugar de atacar, el actor podría, por ejemplo, reducir el próximo daño que reciba
+        # o curarse una pequeña cantidad si tuviera esa habilidad.
+        # Por ahora, solo una acción defensiva simple.
+        # actor.temporary_defense_bonus += 2 # Ejemplo de mecánica posible
         return f"{actor.name} adopta una postura defensiva, preparándose para el próximo ataque."
 
-class SpellCastingStrategy(CombatStrategy): # Específica para Magos, por ejemplo
+class SpellCastingStrategy(CombatStrategy):
+    SPELL_COST = 10
+    SPELL_DAMAGE = 15
+
     def execute_action(self, actor: 'Character', target: 'Character') -> str:
-        # Verificar si el actor tiene 'mana', típico de un Mago
-        if hasattr(actor, 'mana') and actor.mana >= 10:
-            # actor.mana -= 10 # (Descomentar cuando tengamos manejo de mana)
-            spell_damage = 15 # Daño mágico simulado
-            # target.health -= spell_damage # (Descomentar)
-            return f"{actor.name} lanza un hechizo a {target.name} causando {spell_damage} de daño mágico (simulado)."
-        elif hasattr(actor, 'mana') and actor.mana < 10:
-            return f"{actor.name} intenta lanzar un hechizo, ¡pero no tiene suficiente maná!"
+        if hasattr(actor, 'mana'):
+            if actor.mana >= self.SPELL_COST:
+                actor.mana -= self.SPELL_COST
+                if target.health > 0:
+                    target.take_damage(self.SPELL_DAMAGE)
+                    return (f"{actor.name} lanza un hechizo a {target.name} "
+                            f"causando {self.SPELL_DAMAGE} de daño mágico. ¡{target.name} tiene {target.health} de salud restante! "
+                            f"{actor.name} tiene {actor.mana} de maná restante.")
+                else:
+                    return f"{actor.name} lanza un hechizo a {target.name}, pero ya está derrotado. ({actor.mana} maná restante)"
+            else:
+                return f"{actor.name} intenta lanzar un hechizo, ¡pero no tiene suficiente maná ({actor.mana})!"
         else:
-            # Si no es un mago o no tiene maná, recurre a un ataque simple (o no hace nada)
-            return f"{actor.name} intenta lanzar un hechizo pero no puede. ¡Quizás debería cambiar de estrategia!"
+            return f"{actor.name} intenta lanzar un hechizo pero no es un lanzador de conjuros."

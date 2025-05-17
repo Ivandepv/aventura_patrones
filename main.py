@@ -1,29 +1,123 @@
 # main.py
+"""
+Punto de entrada principal y bucle del juego de aventura basado en texto.
+Demuestra el uso de patrones de diseño para crear personajes, ítems y gestionar acciones.
+"""
 from game.factories import WarriorFactory, MageFactory, RogueFactory, CharacterEquipmentFactory
-from game.characters import Character
-from game.characters import Character, Warrior, Mage, Rogue # Importamos las clases concretas
-from game.items import Sword, FireEnchantment, PoisonEnchantment, VorpalEnchantment # Nuevas importaciones
-from game.strategies import AggressiveStrategy, DefensiveStrategy, SpellCastingStrategy
+from game.characters import Character, Warrior, Mage, Rogue # Importaciones consolidadas
+# game.items y game.strategies no necesitan importarse aquí si no se usan directamente.
+from game.commands import Command, LookCommand, AttackCommand, MoveCommand, ChangeStrategyCommand, QuitCommand
+from game.constants import STRATEGY_NAMES # Para el mensaje de ayuda de estrategias
 
-def create_player(factory: CharacterEquipmentFactory, player_name: str) -> Character:
-    """Crea un personaje usando la fábrica proporcionada."""
-    player = factory.create_character(player_name)
-    return player
+def parse_input(input_str: str, player: Character, current_enemy: Character = None) -> Command | None:
+    """
+    Parsea la entrada del usuario y la convierte en un objeto Comando.
+    Retorna un Comando o None si la entrada no es válida.
+    """
+    parts = input_str.lower().strip().split()
+    if not parts:
+        print("Por favor, introduce un comando.")
+        return None
+
+    action = parts[0]
+
+    if action == "mirar":
+        return LookCommand(player)
+    elif action == "atacar":
+        if current_enemy and current_enemy.health > 0:
+            return AttackCommand(player, current_enemy)
+        elif current_enemy and current_enemy.health <= 0:
+            print(f"{current_enemy.name} ya ha sido derrotado.")
+            return None
+        else:
+            print("No hay nadie a quien atacar aquí.")
+            return None
+    elif action == "mover":
+        if len(parts) > 1:
+            direction = parts[1]
+            return MoveCommand(player, direction)
+        else:
+            print("Mover ¿hacia dónde? (ej: mover norte)")
+            return None
+    elif action == "estrategia":
+        if len(parts) > 1:
+            strategy_name_input = parts[1]
+            return ChangeStrategyCommand(player, strategy_name_input)
+        else:
+            available_strats = ", ".join(STRATEGY_NAMES.values())
+            print(f"Cambiar a qué estrategia? (ej: estrategia agresiva). Disponibles: {available_strats}.")
+            return None
+    elif action == "salir":
+        return QuitCommand()
+    else:
+        print(f"Comando desconocido: '{action}'. Comandos comunes: mirar, mover, atacar, estrategia, salir.")
+        return None
+
+def game_loop(player: Character):
+    """Bucle principal del juego."""
+    print("\n" + "="*30)
+    print("--- ¡Comienza la Aventura! ---")
+    print("Escribe 'mirar', 'mover [direccion]', 'atacar', 'estrategia [nombre]', o 'salir'.")
+    print("="*30 + "\n")
+
+
+    # Creamos un enemigo de ejemplo para interactuar
+    # TODO: La creación de enemigos podría ser más dinámica o basada en la 'sala' actual.
+    enemy_factory = RogueFactory() # Podría ser aleatorio o específico de una zona
+    current_enemy: Character | None = enemy_factory.create_character("Orco Grunon")
+    # current_enemy.set_combat_strategy(AggressiveStrategy()) # Ya tiene una por defecto
+    print(f"¡Un {current_enemy.name} ({current_enemy.__class__.__name__}) aparece rugiendo!")
+    print(current_enemy.describe())
+
+    while True:
+        if player.health <= 0:
+            print(f"\nGAME OVER: ¡{player.name} ha sido derrotado!")
+            break
+        
+        user_input = input(f"\n{player.name} (Salud: {player.health})> ")
+        command = parse_input(user_input, player, current_enemy)
+
+        if isinstance(command, Command):
+            result = command.execute()
+
+            if result == "salir_command_signal": # Señal de QuitCommand
+                print("¡Hasta la próxima aventura!")
+                break
+            
+            print(f"\n{result}") # Imprime el resultado de la acción del jugador
+
+            # Lógica del turno del enemigo si el jugador realizó una acción y hay un enemigo
+            if current_enemy and current_enemy.health > 0:
+                # El enemigo solo actúa si el jugador no acaba de salir o mirar (o alguna otra acción no agresiva)
+                # Esto es una simplificación, podrías tener una lógica más compleja para el turno del enemigo.
+                if not isinstance(command, (LookCommand, QuitCommand, ChangeStrategyCommand, MoveCommand)):
+                    print(f"\n--- Turno de {current_enemy.name} (Salud: {current_enemy.health}) ---")
+                    enemy_action_result = current_enemy.perform_combat_action(player)
+                    print(enemy_action_result)
+            
+            # Comprobar si el enemigo fue derrotado después del turno del jugador o del enemigo
+            if current_enemy and current_enemy.health <= 0:
+                print(f"\n¡Has derrotado a {current_enemy.name}!")
+                current_enemy = None # Eliminar al enemigo actual
+                # TODO: Podrías generar un nuevo enemigo o dar alguna recompensa.
 
 def main():
-    print("¡Bienvenido al Juego de Aventura!")
+    """Función principal para iniciar el juego."""
+    print("="*30)
+    print("  Bienvenido al Juego de Aventura con Patrones de Diseño  ")
+    print("="*30)
     player_name = input("Ingresa el nombre de tu personaje: ")
 
     print("\nElige tu clase:")
-    print("1. Guerrero")
-    print("2. Mago")
-    print("3. Pícaro")
+    class_options = {"1": "Guerrero", "2": "Mago", "3": "Pícaro"}
+    for key, value in class_options.items():
+        print(f"{key}. {value}")
 
     choice = ""
-    player_factory = None
+    player_factory: CharacterEquipmentFactory | None = None # Type hint para claridad
 
-    while choice not in ["1", "2", "3"]:
-        choice = input("Selecciona una opción (1, 2, o 3): ")
+    while choice not in class_options:
+        choice = input(f"Selecciona una opción ({', '.join(class_options.keys())}): ")
         if choice == "1":
             player_factory = WarriorFactory()
         elif choice == "2":
@@ -33,78 +127,11 @@ def main():
         else:
             print("Opción no válida. Intenta de nuevo.")
 
-    player = create_player(player_factory, player_name)
-
+    player = player_factory.create_character(player_name)
     print(f"\n¡{player_name}, tu aventura como {player.__class__.__name__} comienza!")
-    player.describe()
+    print(player.describe()) # Imprime la descripción inicial del jugador
 
-    print("\n--- Probando Decoradores de Armas ---")
-    # Supongamos que el jugador tiene una espada simple (esto podría venir de la fábrica)
-    # o la encuentra.
-    if isinstance(player.weapon, Sword): # Solo para el ejemplo, si el jugador tiene una espada
-        current_weapon = player.weapon
-        print(f"Arma actual: {current_weapon.get_name()}, Bonus: {current_weapon.attack_bonus()}")
-        print(f"Descripción: {current_weapon.get_description()}")
-
-        # El jugador encuentra un pergamino de encantamiento de fuego
-        print("\n¡Has encontrado un Pergamino de Encantamiento de Fuego!")
-        current_weapon = FireEnchantment(current_weapon)
-        player.weapon = current_weapon # Actualizamos el arma del jugador
-        print(f"Arma encantada: {current_weapon.get_name()}, Bonus: {current_weapon.attack_bonus()}")
-        print(f"Descripción: {current_weapon.get_description()}")
-
-        # Luego, encuentra uno de veneno ¡y lo aplica sobre el arma ya encantada con fuego!
-        print("\n¡Has encontrado Esencia de Veneno!")
-        current_weapon = PoisonEnchantment(current_weapon)
-        player.weapon = current_weapon # Actualizamos el arma del jugador
-        print(f"Arma doblemente encantada: {current_weapon.get_name()}, Bonus: {current_weapon.attack_bonus()}")
-        print(f"Descripción: {current_weapon.get_description()}")
-        
-        # Y finalmente, un encantamiento legendario
-        print("\n¡Un antiguo poder imbuye tu arma!")
-        current_weapon = VorpalEnchantment(current_weapon)
-        player.weapon = current_weapon # Actualizamos el arma del jugador
-        print(f"Arma legendaria: {current_weapon.get_name()}, Bonus: {current_weapon.attack_bonus()}")
-        print(f"Descripción: {current_weapon.get_description()}")
-
-    # Actualizamos la descripción del jugador para ver el arma nueva
-    print("\n--- Estado del Jugador Actualizado ---")
-    player.describe()
-
-
-    print("\n--- Probando Estrategias de Combate ---")
-    # Para simular un combate, necesitamos un "enemigo".
-    # Por ahora, crearemos otro personaje como enemigo usando una fábrica.
-    print("Un enemigo aparece...")
-    enemy_factory = RogueFactory() # Un pícaro enemigo
-    enemy = enemy_factory.create_character("Bandido Furtivo")
-    # Podríamos darle una estrategia específica al enemigo
-    enemy.set_combat_strategy(AggressiveStrategy())
-    enemy.describe()
-
-    print(f"\n¡{player.name} se enfrenta a {enemy.name}!")
-
-    # Simulación de un turno de combate
-    action_description_player = player.perform_combat_action(enemy)
-    print(f"[Turno del Jugador] {action_description_player}")
-
-    action_description_enemy = enemy.perform_combat_action(player)
-    print(f"[Turno del Enemigo] {action_description_enemy}")
-
-    # El jugador decide cambiar de estrategia
-    if isinstance(player, Mage): # Si el jugador es Mago, puede tener más sentido cambiar a defensiva
-        print(f"\n{player.name} reconsidera su estrategia...")
-        player.set_combat_strategy(DefensiveStrategy())
-    else: # Si no, quizás una estrategia agresiva
-        player.set_combat_strategy(AggressiveStrategy()) # O cualquier otra disponible
-
-    # Otro turno
-    action_description_player = player.perform_combat_action(enemy)
-    print(f"[Turno del Jugador] {action_description_player}")
-
-
-    # Aquí iría el bucle principal del juego
-    # game_loop()
+    game_loop(player)
 
 if __name__ == "__main__":
     main()

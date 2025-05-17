@@ -1,9 +1,11 @@
 # game/items.py
+"""
+Define los ítems del juego, incluyendo armas, armaduras y el sistema de decoración para encantamientos.
+"""
 from abc import ABC, abstractmethod
 
-# --- Interfaces para los Productos (Componentes) ---
-
-class ItemEnhancement(ABC): # Interfaz común para cualquier tipo de item que pueda ser decorado
+# --- Interfaz Común para Ítems Decorables ---
+class ItemEnhancement(ABC):
     @abstractmethod
     def get_name(self) -> str:
         pass
@@ -12,23 +14,18 @@ class ItemEnhancement(ABC): # Interfaz común para cualquier tipo de item que pu
     def get_description(self) -> str:
         pass
 
-class Weapon(ItemEnhancement): # Weapon ahora hereda de ItemEnhancement
+# --- Interfaces para los Productos (Componentes) ---
+class Weapon(ItemEnhancement):
     @abstractmethod
     def attack_bonus(self) -> int:
         pass
 
-    # get_name y get_description vendrán de los decoradores o de la implementación base
-    # pero necesitamos que Weapon sea un ItemEnhancement para que los decoradores genéricos funcionen
-
-class Armor(ItemEnhancement): # Armor ahora hereda de ItemEnhancement
+class Armor(ItemEnhancement):
     @abstractmethod
     def defense_bonus(self) -> int:
         pass
 
-    # get_name y get_description vendrán de los decoradores o de la implementación base
-
 # --- Productos Concretos: Armas ---
-
 class Sword(Weapon):
     def get_name(self) -> str:
         return "Espada"
@@ -47,7 +44,7 @@ class Staff(Weapon):
         return 3
 
     def get_description(self) -> str:
-        return "Una vara de madera nudosa, canaliza energías."
+        return "Una vara de madera nudosa, ideal para canalizar energías."
 
 class Dagger(Weapon):
     def get_name(self) -> str:
@@ -57,10 +54,9 @@ class Dagger(Weapon):
         return 2
 
     def get_description(self) -> str:
-        return "Una daga corta y sigilosa."
+        return "Una daga corta y sigilosa, perfecta para ataques rápidos."
 
 # --- Productos Concretos: Armaduras ---
-
 class Chainmail(Armor):
     def get_name(self) -> str:
         return "Cota de Mallas"
@@ -69,7 +65,7 @@ class Chainmail(Armor):
         return 10
 
     def get_description(self) -> str:
-        return "Una cota de mallas resistente."
+        return "Una cota de mallas resistente que ofrece buena protección."
 
 class Robe(Armor):
     def get_name(self) -> str:
@@ -79,7 +75,7 @@ class Robe(Armor):
         return 3
 
     def get_description(self) -> str:
-        return "Una túnica ligera, ofrece poca protección física."
+        return "Una túnica ligera, ofrece poca protección física pero no estorba."
 
 class LeatherArmor(Armor):
     def get_name(self) -> str:
@@ -89,41 +85,34 @@ class LeatherArmor(Armor):
         return 6
 
     def get_description(self) -> str:
-        return "Una armadura de cuero curtido."
+        return "Una armadura de cuero curtido, balance entre movilidad y protección."
 
-
-# --- Clase Decoradora Base Abstracta ---
-# Haremos un decorador para Weapon y otro para Armor, o uno más genérico si es posible.
-# Empecemos con decoradores específicos para Weapon por simplicidad.
-
-class WeaponDecorator(Weapon, ABC): # Hereda de Weapon para ser un tipo de Weapon
+# --- Clase Decoradora Base Abstracta para Armas ---
+class WeaponDecorator(Weapon, ABC):
     _decorated_weapon: Weapon
 
     def __init__(self, weapon: Weapon):
         self._decorated_weapon = weapon
 
-    @abstractmethod # Forzamos a las subclases a implementar cómo modifican el nombre
+    @abstractmethod
     def get_name(self) -> str:
         pass
 
-    @abstractmethod # Forzamos a las subclases a implementar cómo modifican la descripción
+    @abstractmethod
     def get_description(self) -> str:
         pass
     
-    @abstractmethod # Forzamos a las subclases a implementar cómo modifican el bonus de ataque
+    @abstractmethod
     def attack_bonus(self) -> int:
         pass
 
-
-
 # --- Decoradores Concretos para Armas ---
-
 class FireEnchantment(WeaponDecorator):
     def get_name(self) -> str:
         return f"{self._decorated_weapon.get_name()} de Fuego"
 
     def attack_bonus(self) -> int:
-        return self._decorated_weapon.attack_bonus() + 3 # El fuego añade 3 de daño
+        return self._decorated_weapon.attack_bonus() + 3
 
     def get_description(self) -> str:
         return f"{self._decorated_weapon.get_description()} Ahora emite un calor abrasador y añade daño de fuego."
@@ -133,19 +122,17 @@ class PoisonEnchantment(WeaponDecorator):
         return f"{self._decorated_weapon.get_name()} Venenosa"
 
     def attack_bonus(self) -> int:
-        # El veneno podría no añadir daño directo, sino un efecto.
-        # En el futuro, esto podría interactuar con un sistema de estado.
-        return self._decorated_weapon.attack_bonus() + 1
+        return self._decorated_weapon.attack_bonus() + 1 # Podría aplicar un estado "envenenado" en un futuro.
 
     def get_description(self) -> str:
-        return f"{self._decorated_weapon.get_description()} Está cubierta de una sustancia tóxica que puede envenenar."
+        return f"{self._decorated_weapon.get_description()} Está cubierta de una sustancia tóxica."
 
-class VorpalEnchantment(WeaponDecorator): # Un encantamiento más poderoso
+class VorpalEnchantment(WeaponDecorator):
     def get_name(self) -> str:
         return f"{self._decorated_weapon.get_name()} Aniquiladora (Vorpal)"
 
     def attack_bonus(self) -> int:
-        return self._decorated_weapon.attack_bonus() + 10 # Gran aumento de daño
+        return self._decorated_weapon.attack_bonus() + 10
 
     def get_description(self) -> str:
         return f"{self._decorated_weapon.get_description()} Susurros de poder emanan de esta hoja, ¡capaz de decapitar con un golpe de suerte!"
